@@ -13,6 +13,12 @@ export interface Mission {
   rubric: string[];
   xp: number;
   prerequisites: string[];
+  collection?: "foundations" | "advanced";
+  lesson?: {
+    number: number;
+    concept: string;
+    hints: string[];
+  };
 }
 
 export interface Attempt {

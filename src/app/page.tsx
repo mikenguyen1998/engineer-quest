@@ -1,5 +1,5 @@
-import { QuestDashboard } from "@/features/quest/quest-dashboard";
+import { StudentLanding } from "@/features/marketing/student-landing";
 
 export default function Home() {
-  return <QuestDashboard />;
+  return <StudentLanding />;
 }

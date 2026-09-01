@@ -4,9 +4,9 @@ An engineering-practice app that turns challenge work into visible evidence. It 
 
 ## Portfolio walkthrough
 
-The deployed app offers an **interactive demo** from the first screen—no email required. It seeds a small amount of progress locally so a reviewer can explore challenge selection, the browser-based code editor and sandboxed preview, evidence submission, XP updates, and the completion flow.
+The public home page presents **Web Foundations**, a six-lesson beginner course covering semantic HTML, responsive CSS, accessible forms, JavaScript events, DOM updates, and a small project. Visitors can enter the workspace and try the first exercise without an account. Browser self-checks give clear, deterministic feedback before a learner completes an exercise.
 
-For authenticated users, magic-link sign-in persists challenges and evidence securely through Supabase.
+For authenticated users, magic-link sign-in persists challenges and evidence securely through Supabase. The existing engineering tracks remain available as an Advanced Practice library.
 
 ## Run locally
 
@@ -22,7 +22,7 @@ pnpm dev
 3. In the Supabase SQL Editor, run every SQL file in `supabase/migrations/` in filename order.
 4. Add `http://localhost:3000/auth/callback` and your deployed `/auth/callback` URL to the Supabase Auth redirect allow list.
 
-The migrations create protected profile/progress tables, seed 19 missions, and expose transactional completion RPCs. The latest migrations add saved HTML, CSS, and JavaScript evidence for the in-app code editor plus separate Frontend, Backend, Full-stack, and Tester XP totals. Never add a Supabase service-role key to the browser or `.env.local`.
+The migrations create protected profile/progress tables, seed 25 missions, and expose transactional completion RPCs. Run the Web Foundations migration after the existing migrations. The latest migrations add saved HTML, CSS, and JavaScript evidence for the in-app code editor plus separate Frontend, Backend, Full-stack, and Tester XP totals. Never add a Supabase service-role key to the browser or `.env.local`.
 
 ## Current scope
 
