@@ -63,6 +63,18 @@ export function QuestDashboard() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [copied, setCopied] = useState(false);
   const [celebration, setCelebration] = useState<Celebration>(null);
+  const [demoMode, setDemoMode] = useState(false);
+
+  const startDemo = () => {
+    setDemoMode(true);
+    setUserEmail("Demo workspace");
+    setProfile({ totalXp: 40, level: "Fresher", importedAt: new Date().toISOString(), frontendXp: 40, backendXp: 0, fullstackXp: 0, testerXp: 0 });
+    setMissions(localMissions);
+    setAttempts([{ missionId: "fe-state-tracing", answer: "I would reproduce the filter transition, trace the selected ID back to its owner, and remove any copied selection state that can become stale.", reflection: "I would add a regression test for filtering an already-selected item and verify the selected ID remains the source of truth.", completedAt: new Date().toISOString(), awardedXp: 40 }]);
+    setTrack("frontend");
+    setSelectedMissionId("fe-semantic-form");
+    setStatus("");
+  };
 
   const loadProgress = async () => {
     const supabase = createSupabaseBrowserClient();
@@ -117,7 +129,7 @@ export function QuestDashboard() {
   }, [selectedMission, htmlCode, cssCode, javascriptCode]);
 
   const sendMagicLink = async (event: FormEvent) => { event.preventDefault(); setAuthMessage(""); const { error } = await createSupabaseBrowserClient().auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } }); setAuthMessage(error ? error.message : "Magic link sent. Check your inbox to continue."); };
-  const signOut = async () => { await createSupabaseBrowserClient().auth.signOut(); setUserEmail(null); setProfile(null); setMissions([]); setAttempts([]); setStatus(""); };
+  const signOut = async () => { if (!demoMode) await createSupabaseBrowserClient().auth.signOut(); setDemoMode(false); setUserEmail(null); setProfile(null); setMissions([]); setAttempts([]); setStatus(""); };
   const chooseMission = (mission: Mission) => {
     setSelectedMissionId(mission.id);
     setAnswer("");
@@ -133,6 +145,20 @@ export function QuestDashboard() {
   const copyPrompt = async () => { if (!selectedMission) return; await navigator.clipboard.writeText(`You are a senior ${selectedMission.track} engineering reviewer.\n\nMission: ${selectedMission.title}\n${selectedMission.prompt}\n\nMy answer:\n${answer || "[Paste my answer here]"}\n\nReview against this rubric:\n${selectedMission.rubric.map((item) => `- ${item}`).join("\n")}\n\nDo not give a replacement solution first. Ask up to three questions that help me discover gaps, then give feedback as blocker, important, or suggestion.`); setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
   const completeMission = async () => {
     if (!selectedMission || !answer.trim() || !reflection.trim() || !profile) return;
+    if (demoMode) {
+      const totalXp = profile.totalXp + selectedMission.xp;
+      const level = [...levels].reverse().find((item) => totalXp >= item.minimum)?.name ?? "Fresher";
+      const nextProfile = { ...profile, totalXp, level };
+      if (selectedMission.track === "frontend") nextProfile.frontendXp += selectedMission.xp;
+      if (selectedMission.track === "backend") nextProfile.backendXp += selectedMission.xp;
+      if (selectedMission.track === "fullstack") nextProfile.fullstackXp += selectedMission.xp;
+      if (selectedMission.track === "tester") nextProfile.testerXp += selectedMission.xp;
+      setAttempts((current) => [...current, { missionId: selectedMission.id, answer: answer.trim(), reflection: reflection.trim(), completedAt: new Date().toISOString(), awardedXp: selectedMission.xp, aiFeedback: aiFeedback.trim() || null, htmlCode: selectedMission.type === "build" ? htmlCode.trim() : null, cssCode: selectedMission.type === "build" ? cssCode.trim() || null : null, javascriptCode: selectedMission.type === "build" ? javascriptCode.trim() : null }]);
+      setProfile(nextProfile);
+      setCelebration({ mission: selectedMission, earnedXp: selectedMission.xp, promoted: profile.level !== level });
+      setAnswer(""); setReflection("");
+      return;
+    }
     setSubmitting(true); setStatus("");
     const rpc = selectedMission.type === "build" ? "submit_code_challenge" : "submit_challenge";
     const params = selectedMission.type === "build" ? { p_mission_id: selectedMission.id, p_answer: answer.trim(), p_reflection: reflection.trim(), p_html_code: htmlCode.trim(), p_css_code: cssCode.trim() || null, p_javascript_code: javascriptCode.trim(), p_ai_feedback: aiFeedback.trim() || null } : { p_mission_id: selectedMission.id, p_answer: answer.trim(), p_reflection: reflection.trim(), p_repository_url: repositoryUrl.trim() || null, p_demo_url: demoUrl.trim() || null, p_test_result: testResult.trim() || null, p_ai_feedback: aiFeedback.trim() || null };
@@ -145,12 +171,13 @@ export function QuestDashboard() {
   };
   const importLegacy = async () => { setImporting(true); let imported = 0; const supabase = createSupabaseBrowserClient(); for (const attempt of legacyAttempts) { const { error } = await supabase.rpc("complete_mission", { p_mission_id: attempt.missionId, p_answer: attempt.answer, p_reflection: attempt.reflection }); if (!error) imported += 1; } const { error } = await supabase.rpc("mark_legacy_imported"); if (error) setStatus(error.message); else { setLegacyAttempts([]); setStatus(`${imported} evidence entr${imported === 1 ? "y" : "ies"} imported.`); await loadProgress(); } setImporting(false); };
 
-  if (!isSupabaseConfigured) return <main className="app-shell"><SetupPanel /></main>;
+  if (!isSupabaseConfigured && !demoMode) return <main className="app-shell"><SetupPanel onTryDemo={startDemo} /></main>;
   const callbackError = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("authError");
-  if (!userEmail) return <main className="auth-page"><ThemeButton theme={theme} onClick={toggleTheme} /><section className="auth-intro"><p className="brand"><Zap size={18} /> Engineer Quest</p><p className="eyebrow">YOUR ENGINEERING PRACTICE SYSTEM</p><h1>Make your judgment visible.</h1><p>Build evidence through real engineering challenges. Your XP, level, and written work follow you everywhere.</p><div className="auth-benefits"><span><Check /> Curated challenge paths</span><span><Check /> Private evidence portfolio</span><span><Check /> Cloud-saved progression</span></div></section><form className="auth-card" onSubmit={sendMagicLink}><p className="eyebrow">ENTER THE WORKSPACE</p><h2>Continue your quest</h2><label>Email address<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label><button className="button primary-button" type="submit"><Send size={17} /> Send magic link</button>{(authMessage || callbackError) && <p className="notice" role="status">{authMessage || callbackError}</p>}<small>No password required. We’ll email a secure sign-in link.</small></form></main>;
+  if (!userEmail) return <main className="auth-page"><ThemeButton theme={theme} onClick={toggleTheme} /><section className="auth-intro"><p className="brand"><Zap size={18} /> Engineer Quest</p><p className="eyebrow">YOUR ENGINEERING PRACTICE SYSTEM</p><h1>Make your judgment visible.</h1><p>Build evidence through real engineering challenges. Your XP, level, and written work follow you everywhere.</p><div className="auth-benefits"><span><Check /> Curated challenge paths</span><span><Check /> Private evidence portfolio</span><span><Check /> Cloud-saved progression</span></div></section><form className="auth-card" onSubmit={sendMagicLink}><p className="eyebrow">ENTER THE WORKSPACE</p><h2>Continue your quest</h2><label>Email address<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label><button className="button primary-button" type="submit"><Send size={17} /> Send magic link</button><button className="button secondary-button demo-button" type="button" onClick={startDemo}>Explore the interactive demo <ChevronRight size={17} /></button>{(authMessage || callbackError) && <p className="notice" role="status">{authMessage || callbackError}</p>}<small>No password required. The demo is local to this browser and does not save to an account.</small></form></main>;
   if (!profile) return <main className="app-shell"><LoadingPanel message={status || "Preparing your workspace…"} /></main>;
 
-  return <main className="app-shell"><header className="topbar"><a className="brand" href="#top"><Zap size={18} /> Engineer Quest</a><div className="topbar-actions"><span className="identity">{userEmail}</span><ThemeButton theme={theme} onClick={toggleTheme} /><button className="icon-button" aria-label="Sign out" onClick={signOut}><LogOut size={18} /></button></div></header><div id="top" className={`dashboard track-${track}`}>
+  return <main className="app-shell"><header className="topbar"><a className="brand" href="#top"><Zap size={18} /> Engineer Quest</a><div className="topbar-actions">{demoMode && <span className="demo-badge">Interactive demo</span>}<span className="identity">{userEmail}</span><ThemeButton theme={theme} onClick={toggleTheme} /><button className="icon-button" aria-label={demoMode ? "Exit demo" : "Sign out"} onClick={signOut}><LogOut size={18} /></button></div></header><div id="top" className={`dashboard track-${track}`}>
+    {demoMode && <p className="demo-notice" role="status">You’re exploring a local demo. Try a challenge, submit it, and see the XP flow—nothing is saved to an account.</p>}
     <section className="command-center"><div className="command-copy"><p className="eyebrow">{tracks.find((item) => item.id === track)?.label.toUpperCase()} PATH · {profile.level.toUpperCase()} ENGINEER</p><h1>{recommended ? "Your next challenge is ready." : "Every challenge is complete."}</h1><p>{recommended ? `${recommended.title} is the recommended next step in your ${tracks.find((item) => item.id === recommended.track)?.label ?? ""} path.` : "You have completed the full Engineer Quest curriculum."}</p>{recommended && <button className="button primary-button" onClick={() => { setTrack(recommended.track); chooseMission(recommended); }}><Target size={18} /> Start next challenge <ChevronRight size={17} /></button>}</div><div className="rank-card"><div className="rank-icon"><Trophy size={26} /></div><span>Overall rank</span><strong>{profile.level}</strong><div className="xp-track" aria-label={`${Math.round(progressPercent)} percent to next rank`}><i style={{ width: `${progressPercent}%` }} /></div><small>{currentLevel.next ? `${currentLevel.next - profile.totalXp} XP to ${levels[levels.indexOf(currentLevel) + 1].name}` : "Mastery achieved"}</small></div></section>
     {!profile.importedAt && legacyAttempts.length > 0 && <section className="import-banner"><div><span className="mini-icon"><Clipboard size={18} /></span><div><strong>Bring your earlier work with you</strong><p>Import {legacyAttempts.length} browser-saved evidence entr{legacyAttempts.length === 1 ? "y" : "ies"} to this account.</p></div></div><button className="button secondary-button" onClick={importLegacy} disabled={importing}>{importing ? "Importing…" : "Import evidence"}</button></section>}
     {status && <p className="notice status-notice" role="status"><CircleAlert size={16} /> {status}</p>}
@@ -166,5 +193,5 @@ export function QuestDashboard() {
 function ThemeButton({ theme, onClick }: { theme: "dark" | "light"; onClick: () => void }) { return <button className="icon-button" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} onClick={onClick}>{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button>; }
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="metric"><span>{icon}</span><div><small>{label}</small><strong>{value}</strong></div></div>; }
 function LoadingPanel({ message }: { message: string }) { return <section className="state-panel"><span className="loading-orb" /><p className="eyebrow">ENGINEER QUEST</p><h1>{message}</h1><p>Loading your saved practice history and current path.</p></section>; }
-function SetupPanel() { return <section className="state-panel"><span className="mini-icon"><CircleAlert size={22} /></span><p className="eyebrow">SETUP REQUIRED</p><h1>Connect your quest workspace.</h1><p>Add the public Supabase values to <code>.env.local</code>, then run the supplied migration to enable secure accounts and progress.</p></section>; }
+function SetupPanel({ onTryDemo }: { onTryDemo: () => void }) { return <section className="state-panel"><span className="mini-icon"><CircleAlert size={22} /></span><p className="eyebrow">DEMO READY</p><h1>Explore Engineer Quest.</h1><p>This deployment has no connected Supabase project, but you can still walk through the full interactive workspace without an account.</p><button className="button primary-button" onClick={onTryDemo}>Explore the interactive demo <ChevronRight size={17} /></button><p><small>To enable accounts and cloud-saved progress, add the public Supabase values and run the supplied migrations.</small></p></section>; }
 function CompletionPanel({ celebration, next, onNext }: { celebration: Exclude<Celebration, null>; next?: Mission; onNext: () => void }) { return <section className="completion-panel"><span className="completion-icon"><Trophy size={32} /></span><p className="eyebrow">EVIDENCE SAVED</p><h2>Challenge complete.</h2><p>You earned <strong>{celebration.earnedXp} XP</strong> for {celebration.mission.title}.{celebration.promoted ? " You reached a new engineering rank." : ""}</p>{next && <button className="button primary-button" onClick={onNext}>Continue to {next.title} <ChevronRight size={17} /></button>}</section>; }

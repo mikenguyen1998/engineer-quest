@@ -1,6 +1,12 @@
 # Engineer Quest
 
-A personal engineering gym for practising frontend and full-stack judgment, with Supabase-backed evidence and progression.
+An engineering-practice app that turns challenge work into visible evidence. It supports frontend, backend, full-stack, and quality-engineering paths, with Supabase-backed evidence and progression.
+
+## Portfolio walkthrough
+
+The deployed app offers an **interactive demo** from the first screen—no email required. It seeds a small amount of progress locally so a reviewer can explore challenge selection, the browser-based code editor and sandboxed preview, evidence submission, XP updates, and the completion flow.
+
+For authenticated users, magic-link sign-in persists challenges and evidence securely through Supabase.
 
 ## Run locally
 
@@ -20,6 +26,6 @@ The migrations create protected profile/progress tables, seed 19 missions, and e
 
 ## Current scope
 
-The app includes passwordless email accounts, cross-device evidence and XP persistence, career ranks, prerequisites, self-reflection, an optional one-time import of legacy browser progress, and AI-review prompt export. It deliberately has no server-side code execution.
+The app includes passwordless email accounts, cross-device evidence and XP persistence, career ranks, prerequisites, self-reflection, an optional one-time import of legacy browser progress, and AI-review prompt export. It deliberately has no server-side code execution; code previews run inside a sandboxed iframe.
 
 See [`docs/product-brief.md`](docs/product-brief.md) for the product boundaries.
