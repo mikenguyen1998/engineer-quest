@@ -1,0 +1,18 @@
+# Dependencies and generated builds
+node_modules/
+.next/
+out/
+
+# Local environment credentials; keep the safe template tracked
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# TypeScript and tooling caches
+*.tsbuildinfo
+.eslintcache
+coverage/
+
+# Operating-system files
+.DS_Store
