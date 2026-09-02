@@ -29,3 +29,7 @@ The migrations create protected profile/progress tables, seed 25 missions, and e
 The app includes passwordless email accounts, cross-device evidence and XP persistence, career ranks, prerequisites, self-reflection, an optional one-time import of legacy browser progress, and AI-review prompt export. It deliberately has no server-side code execution; code previews run inside a sandboxed iframe.
 
 See [`docs/product-brief.md`](docs/product-brief.md) for the product boundaries.
+
+## Engineering standards
+
+See [`AGENTS.md`](AGENTS.md) for the shared engineering, accessibility, Supabase-safety, and visual-system standards used across this portfolio.
